@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxia Saturno 3D 🩵</title>
+    <!-- Three.js para partículas y gráficos 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #010309;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #webglCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Texto superior */
+        .top-header {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            text-align: right;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .top-header h3 {
+            color: #00ffff;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 12px rgba(0, 255, 255, 0.9);
+        }
+
+        .top-header h1 {
+            color: #e0ffff;
+            font-size: 2.2rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            opacity: 0.85;
+            margin-top: -5px;
+            text-shadow: 0 0 18px rgba(0, 191, 255, 0.8);
+        }
+
+        /* Panel de Contraseña Flotante (Sobre Saturno) */
+        .password-panel {
+            position: absolute;
+            z-index: 20;
+            background: rgba(6, 18, 36, 0.85);
+            backdrop-filter: blur(14px);
+            padding: 1.8rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.7), inset 0 0 15px rgba(0, 255, 255, 0.3);
+            border: 1.5px solid rgba(0, 255, 255, 0.6);
+            text-align: center;
+            width: 380px;
+            max-width: 90%;
+            opacity: 0;
+            transform: scale(0.2);
+            pointer-events: none;
+            transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .password-panel.visible {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+        }
+
+        .password-panel.hidden {
+            display: none !important;
+        }
+
+        .password-panel .sub-text {
+            color: #00ffff;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px #00ffff;
+        }
+
+        .password-panel label {
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            display: block;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.9);
+        }
+
+        .input-box-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        input[type="password"] {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1.5px solid rgba(0, 255, 255, 0.6);
+            background: rgba(0, 255, 255, 0.12);
+            color: #ffffff;
+            border-radius: 10px;
+            outline: none;
+            font-size: 1.1rem;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        input[type="password"]:focus {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.9);
+        }
+
+        .btn-unlock {
+            background: rgba(0, 255, 255, 0.25);
+            border: 1.5px solid rgba(0, 255, 255, 0.7);
+            color: #00ffff;
+            width: 45px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+        }
+
+        .btn-unlock:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 1);
+        }
+
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            display: none;
+        }
+
+        /* Indicador en pantalla */
+        #hint-text {
+            position: absolute;
+            bottom: 25px;
+            color: #00ffff;
+            font-size: 0.85rem;
+            z-index: 10;
+            pointer-events: none;
+            background: rgba(4, 14, 28, 0.8);
+            padding: 10px 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            transition: opacity 0.5s ease;
+        }
+
+        /* Carta Desplegable con FONDO PERSONALIZABLE */
+        .letter-container {
+            position: absolute;
+            z-index: 30;
+            width: 90%;
+            max-width: 580px;
+            
+            /* IMAGEN DE FONDO PERSONALIZADA */
+            background: linear-gradient(rgba(4, 18, 38, 0.60), rgba(4, 18, 38, 0.60)), 
+                        url('fondo.jpeg') center/cover no-repeat;
+            
+            border: 1.5px solid #00ffff;
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 0 70px rgba(0, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            transform: translateY(50px) scale(0.9);
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .letter-container.open {
+            display: flex;
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .letter-title {
+            color: #b0e0e6;
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+        }
+
+        .letter-content {
+            color: #ffffff;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            text-align: justify;
+            max-height: 55vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .letter-content::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .letter-content::-webkit-scrollbar-thumb {
+            background: #00ffff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="webglCanvas"></canvas>
+
+    <div class="top-header">
+        <h3>PARA ALGUIEN MUY ESPECIAL 🩵</h3>
+        <h1>cargando...</h1>
+    </div>
+
+    <div id="hint-text">Mantén presionada la pantalla para dispersar las partículas...</div>
+
+    <!-- Panel sobre la Esfera -->
+    <div class="password-panel" id="passwordPanel">
+        <div class="sub-text">cargando</div>
+        <label>CONTRASEÑA PARA TU CARTA PERSONALIZADA 🩵</label>
+        <div class="input-box-container">
+            <input type="password" id="passInput" maxlength="7" placeholder="******">
+            <button class="btn-unlock" onclick="checkPassword()">➔</button>
+        </div>
+        <div class="error-msg" id="errorMsg">Contraseña incorrecta. Inténtalo de nuevo.</div>
+    </div>
+
+    <!-- Carta Desplegable -->
+    <div class="letter-container" id="letterContainer">
+        <h3 class="letter-title">Un Mensaje Especial ✨</h3>
+        <div class="letter-content">
+            <p>
+                Quería decirte que gracias por aparecer en mi vida y convertirte en una persona tan importante para mí. Aunque no te lo diga siempre, te amito muchísimo, amiguita. La verdad, no sé qué haría sin ti. Estoy un poco sentimental, así que te escribo esto desde el fondo de mi corazón 🥺.
+            </p>
+            <br>
+            <p>
+                Tú eres la amiga más especial que tengo, por eso me da muchísimo miedo perderte, que me cambies por una de tus amigas a las que sí puedes ver, o que simplemente de un día para otro me dejes de escribir. Quiero decirte, amiga mía, que no importan los kilómetros que nos separen, tú siempre serás esa amiga en la que más confío y con la que puedo ser yo misma y compartir todo lo que siento.
+            </p>
+            <br>
+            <p>
+                Aunque me llames enana y rarita 🤭, la verdad, gracias; muchísimas gracias por ser mi amiga, porque a ti nunca tuve que pedirte que fueras una buena amiga, simplemente lo fuiste y te lo agradezco. Gracias por estar presente incluso en la distancia que nos separa. Quiero que recuerdes siempre lo importante que eres para mí y lo agradecida que estoy con papito Dios por haberte puesto en mi camino.
+            </p>
+            <br>
+            <p>
+                Una amiga como tú no se encuentra todos los días, por eso te valoro con todo lo que soy. La verdad es que me siento muy afortunada de tenerte en mi vida; no te sabría explicar lo afortunada que me siento por tenerte a ti como mi amiga. Eres una excelente persona con un sentimiento muy lindo y tengo muy claro que cada vez que me digan que las amistades a distancia no funcionan, hablaré de nosotras ✨.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. ESCENA 3D DE SATURNO (THREE.JS)
+        // ==========================================
+        const canvas = document.getElementById('webglCanvas');
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 60);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const saturnGroup = new THREE.Group();
+        saturnGroup.rotation.z = 0.45;
+        saturnGroup.rotation.x = 0.2;
+        scene.add(saturnGroup);
+
+        // Textura ultra brillante
+        function createBrightParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(0.3, '#00ffff');
+            gradient.addColorStop(0.7, 'rgba(0, 191, 255, 0.8)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 32, 32);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const particleTexture = createBrightParticleTexture();
+
+        // ==========================================
+        // 2. ESFERA CENTRAL CON MÁS BRILLO CELESTE
+        // ==========================================
+        const sphereCount = 20000;
+        const sphereGeo = new THREE.BufferGeometry();
+        const spherePos = new Float32Array(sphereCount * 3);
+        const sphereOrigPos = new Float32Array(sphereCount * 3);
+        const sphereTargetPos = new Float32Array(sphereCount * 3);
+        const sphereColors = new Float32Array(sphereCount * 3);
+
+        const radius = 12;
+        for (let i = 0; i < sphereCount; i++) {
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+
+            const r = radius + (Math.random() - 0.5) * 0.6;
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+
+            spherePos[i * 3] = x;
+            spherePos[i * 3 + 1] = y;
+            spherePos[i * 3 + 2] = z;
+
+            sphereOrigPos[i * 3] = x;
+            sphereOrigPos[i * 3 + 1] = y;
+            sphereOrigPos[i * 3 + 2] = z;
+
+            // Dirección de explosión/dispersión
+            const dir = new THREE.Vector3(x, y, z).normalize().multiplyScalar(40 + Math.random() * 50);
+            sphereTargetPos[i * 3] = dir.x;
+            sphereTargetPos[i * 3 + 1] = dir.y;
+            sphereTargetPos[i * 3 + 2] = dir.z;
+
+            // Brillo celeste neón muy intenso
+            const isBrightCyan = Math.random() > 0.2;
+            sphereColors[i * 3] = isBrightCyan ? 0.0 : 0.5;    // R
+            sphereColors[i * 3 + 1] = isBrightCyan ? 1.0 : 0.4;  // G (Verde/Cian alto)
+            sphereColors[i * 3 + 2] = 1.0;                       // B
+        }
+
+        sphereGeo.setAttribute('position', new THREE.BufferAttribute(spherePos, 3));
+        sphereGeo.setAttribute('color', new THREE.BufferAttribute(sphereColors, 3));
+
+        const sphereMat = new THREE.PointsMaterial({
+            size: 0.6,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending
+        });
+
+        const sphereMesh = new THREE.Points(sphereGeo, sphereMat);
+        saturnGroup.add(sphereMesh);
+
+        // ==========================================
+        // 3. ANILLOS EXÓTICOS
+        // ==========================================
+        const ringCount = 35000;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPos = new Float32Array(ringCount * 3);
+        const ringOrigPos = new Float32Array(ringCount * 3);
+        const ringTargetPos = new Float32Array(ringCount * 3);
+        const ringColors = new Float32Array(ringCount * 3);
+
+        const innerRadius = 16;
+        const outerRadius = 33;
+
+        for (let i = 0; i < ringCount; i++) {
+            const r = innerRadius + Math.random() * (outerRadius - innerRadius);
+            const theta = Math.random() * Math.PI * 2;
+
+            const x = r * Math.cos(theta);
+            const y = (Math.random() - 0.5) * 0.4;
+            const z = r * Math.sin(theta);
+
+            ringPos[i * 3] = x;
+            ringPos[i * 3 + 1] = y;
+            ringPos[i * 3 + 2] = z;
+
+            ringOrigPos[i * 3] = x;
+            ringOrigPos[i * 3 + 1] = y;
+            ringOrigPos[i * 3 + 2] = z;
+
+            const dir = new THREE.Vector3(x, y * 10, z).normalize().multiplyScalar(50 + Math.random() * 60);
+            ringTargetPos[i * 3] = dir.x;
+            ringTargetPos[i * 3 + 1] = dir.y;
+            ringTargetPos[i * 3 + 2] = dir.z;
+
+            // Paleta Celeste Vibrante
+            ringColors[i * 3] = 0.0;
+            ringColors[i * 3 + 1] = 0.85 + Math.random() * 0.15;
+            ringColors[i * 3 + 2] = 1.0;
+        }
+
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+        ringGeo.setAttribute('color', new THREE.BufferAttribute(ringColors, 3));
+
+        const ringMat = new THREE.PointsMaterial({
+            size: 0.45,
+            vertexColors: true,
+            map: particleTexture,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending
+        });
+
+        const ringMesh = new THREE.Points(ringGeo, ringMat);
+        saturnGroup.add(ringMesh);
+
+        // ==========================================
+        // 4. ANIMACIÓN DE DISPERSIÓN Y ENSAMBLAJE
+        // ==========================================
+        let isPressing = false;
+        let pressProgress = 0; // 0 = Saturno normal, 1 = Totalmente Disperso
+        let panelUnlockedState = false;
+
+        const passwordPanel = document.getElementById('passwordPanel');
+        const hintText = document.getElementById('hint-text');
+        const letterContainer = document.getElementById('letterContainer');
+        const passInput = document.getElementById('passInput');
+        const errorMsg = document.getElementById('errorMsg');
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotación constante de la galaxia
+            saturnGroup.rotation.y += 0.003;
+
+            // Manejo del progreso de dispersión
+            if (isPressing && pressProgress < 1) {
+                pressProgress += 0.025; // Velocidad de dispersión
+                if (pressProgress >= 1) {
+                    pressProgress = 1;
+                    if (!panelUnlockedState) {
+                        panelUnlockedState = true;
+                        // Transición: las partículas se reunifican en el panel
+                        setTimeout(() => {
+                            passwordPanel.classList.add('visible');
+                        }, 200);
+                    }
+                }
+            } else if (!isPressing && pressProgress > 0 && !panelUnlockedState) {
+                pressProgress -= 0.03; // Regresa a su estado normal si sueltas antes
+                if (pressProgress < 0) pressProgress = 0;
+            }
+
+            // Actualizar posiciones de las partículas de la esfera
+            const sPos = sphereGeo.attributes.position.array;
+            for (let i = 0; i < sphereCount * 3; i++) {
+                sPos[i] = THREE.MathUtils.lerp(sphereOrigPos[i], sphereTargetPos[i], pressProgress);
+            }
+            sphereGeo.attributes.position.needsUpdate = true;
+
+            // Actualizar posiciones de las partículas del anillo
+            const rPos = ringGeo.attributes.position.array;
+            for (let i = 0; i < ringCount * 3; i++) {
+                rPos[i] = THREE.MathUtils.lerp(ringOrigPos[i], ringTargetPos[i], pressProgress);
+            }
+            ringGeo.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Eventos de Interacción (Presionar)
+        function startPress() {
+            if (panelUnlockedState) return;
+            isPressing = true;
+            hintText.style.opacity = '0';
+        }
+
+        function endPress() {
+            if (panelUnlockedState) return;
+            isPressing = false;
+            if (pressProgress < 1) {
+                hintText.style.opacity = '1';
+            }
+        }
+
+        window.addEventListener('mousedown', startPress);
+        window.addEventListener('mouseup', endPress);
+        window.addEventListener('touchstart', startPress);
+        window.addEventListener('touchend', endPress);
+
+        // Validar contraseña
+        function checkPassword() {
+            if (passInput.value === "3895840") {
+                passwordPanel.classList.remove('visible');
+                passwordPanel.classList.add('hidden');
+
+                setTimeout(() => {
+                    letterContainer.classList.add('open');
+                }, 300);
+            } else {
+                errorMsg.style.display = 'block';
+                passInput.value = '';
+            }
+        }
+    </script>
+</body>
+</html>
